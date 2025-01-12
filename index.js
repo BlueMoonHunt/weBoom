@@ -4,19 +4,35 @@ class Vec2 {
         this.x = x;
         this.y = y;
     }
+    length() {
+        return Math.sqrt(this.x * this.x + this.y * this.y);
+    }
+    distanceFrom(that) {
+        return that.sub(this).length();
+    }
+    normalize() {
+        const l = this.length();
+        if (l != 0)
+            return new Vec2(this.x / l, this.x / l);
+        return new Vec2(0, 0);
+    }
+    add(that) { return new Vec2(this.x + that.x, this.y + that.y); }
+    sub(that) { return new Vec2(this.x - that.x, this.y - that.y); }
+    dot(that) { return new Vec2(this.x * that.x, this.y * that.y); }
+    div(that) { return new Vec2(this.x / that.x, this.y / that.y); }
 }
-const gridLayout = new Vec2(10, 10);
-function fillCircle(context, center, radius, fillStyle) {
-    context.fillStyle = "magenta";
+const gridLayout = new Vec2(16, 16);
+function fillCircle(context, center, radius, fillStyle = "grey") {
+    context.fillStyle = fillStyle;
     context.beginPath();
     context.arc(center.x, center.y, radius, 0, 2 * Math.PI);
     context.fill();
 }
-function strokeLine(context, start, end, strokeStyle = "grey", lineWidth = 0.02) {
+function strokeLine(context, begin, end, strokeStyle = "grey", lineWidth = 0.02) {
     context.strokeStyle = strokeStyle;
     context.lineWidth = lineWidth;
     context.beginPath();
-    context.moveTo(start.x, start.y);
+    context.moveTo(begin.x, begin.y);
     context.lineTo(end.x, end.y);
     context.stroke();
 }
@@ -31,7 +47,28 @@ function drawGrids(context, layout) {
         strokeLine(context, new Vec2(0, y), new Vec2(gridLayout.y, y));
     }
 }
-function onUpdate(context) {
+function snapRayToGrid(x, dx, esp = 1e-3) {
+    if (dx > 0)
+        return Math.ceil(x + Math.sign(dx) * esp);
+    else if (dx < 0)
+        return Math.floor(x + Math.sign(dx) * esp);
+    return x;
+}
+function rayCollisionWithGrid(begin, end) {
+    const d = end.sub(begin);
+    if (d.x !== 0) {
+        const m = d.y / d.x;
+        const c = begin.y - m * begin.x;
+        let p3 = new Vec2(snapRayToGrid(end.x, d.x), snapRayToGrid(end.x, d.x) * m + c);
+        if (m !== 0) {
+            const p4 = new Vec2((snapRayToGrid(end.y, d.y) - c) / m, snapRayToGrid(end.y, d.y));
+            if (p4.distanceFrom(end) < p3.distanceFrom(end))
+                p3 = p4;
+        }
+        return p3;
+    }
+    else
+        return new Vec2(end.x, snapRayToGrid(end.y, d.y));
 }
 (() => {
     const game = document.getElementById("game");
@@ -45,14 +82,20 @@ function onUpdate(context) {
         throw new Error("2D context is not supported");
     }
     let mousePosition = undefined;
+    const canvasLayout = new Vec2(context.canvas.width, context.canvas.height);
     game.addEventListener("mousemove", (event) => {
-        mousePosition = new Vec2(event.offsetX * gridLayout.x / context.canvas.width, event.offsetY * gridLayout.y / context.canvas.height);
+        mousePosition = new Vec2(event.offsetX, event.offsetY).dot(gridLayout).div(canvasLayout);
         context.reset();
         drawGrids(context, gridLayout);
-        const point1 = new Vec2(0.5 * gridLayout.x, 0.5 * gridLayout.y);
-        fillCircle(context, point1, 0.2, "magenta");
-        fillCircle(context, mousePosition, 0.2, "magenta");
-        strokeLine(context, point1, mousePosition, "magenta");
+        let point = new Vec2(0.5 * gridLayout.x, 0.5 * gridLayout.y);
+        fillCircle(context, point, 0.1, "magenta");
+        for (let i = 0; i < 6; i++) {
+            fillCircle(context, mousePosition, 0.1, "red");
+            strokeLine(context, point, mousePosition, "red");
+            const p3 = rayCollisionWithGrid(point, mousePosition);
+            point = mousePosition;
+            mousePosition = p3;
+        }
     });
     drawGrids(context, gridLayout);
     console.log(game);
