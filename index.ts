@@ -25,6 +25,25 @@ function strokeLine(context: CanvasRenderingContext2D, start: Vec2, end: Vec2, s
     context.stroke();
 }
 
+function drawGrids(context: CanvasRenderingContext2D, layout: Vec2) {
+    context.fillStyle = "#303030";
+
+    context.fillRect(0, 0, context.canvas.width, context.canvas.height);
+
+    context.scale(context.canvas.width / gridLayout.x, context.canvas.height / gridLayout.y);
+    for (let x = 0; x <= gridLayout.x; x++) {
+        strokeLine(context, new Vec2(x, 0), new Vec2(x, gridLayout.x));
+    }
+
+    for (let y = 0; y <= gridLayout.y; y++) {
+        strokeLine(context, new Vec2(0, y), new Vec2(gridLayout.y, y));
+    }
+}
+
+function onUpdate(context: CanvasRenderingContext2D) {
+
+}
+
 (() => {
     const game = document.getElementById("game") as (HTMLCanvasElement | null);
 
@@ -41,24 +60,25 @@ function strokeLine(context: CanvasRenderingContext2D, start: Vec2, end: Vec2, s
         throw new Error("2D context is not supported");
     }
 
-    context.fillStyle = "#303030";
 
-    context.fillRect(0, 0, context.canvas.width, context.canvas.height);
+    let mousePosition: Vec2 | undefined = undefined;
 
-    context.scale(context.canvas.width / gridLayout.x, context.canvas.height / gridLayout.y);
-    for (let x = 0; x <= gridLayout.x; x++) {
-        strokeLine(context, new Vec2(x, 0), new Vec2(x, gridLayout.x));
-    }
+    game.addEventListener("mousemove", (event) => {
+        mousePosition = new Vec2(
+            event.offsetX * gridLayout.x / context.canvas.width,
+            event.offsetY * gridLayout.y / context.canvas.height
+        );
 
-    for (let y = 0; y <= gridLayout.y; y++) {
-        strokeLine(context, new Vec2(0, y), new Vec2(gridLayout.y, y));
-    }
+        context.reset();
+        drawGrids(context, gridLayout);
 
-    const point1 = new Vec2(0.5 * gridLayout.x, 0.5 * gridLayout.y);
-    const point2 = new Vec2(0.3 * gridLayout.x, 0.7 * gridLayout.y);
-    fillCircle(context, point1, 0.2, "magenta");
-    fillCircle(context, point2, 0.4, "magenta");
-    strokeLine(context, point1, point2, "magenta");
+        const point1 = new Vec2(0.5 * gridLayout.x, 0.5 * gridLayout.y);
+        fillCircle(context, point1, 0.2, "magenta");
+        fillCircle(context, mousePosition, 0.2, "magenta");
+        strokeLine(context, point1, mousePosition, "magenta");
+    })
+
+    drawGrids(context, gridLayout);
 
     console.log(game);
 })()
