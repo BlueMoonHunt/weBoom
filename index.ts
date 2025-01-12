@@ -85,6 +85,11 @@ function rayCollisionWithGrid(begin: Vec2, end: Vec2): Vec2 {
         return new Vec2(end.x, snapRayToGrid(end.y, d.y))
 }
 
+function hitCell(p1: Vec2, p2: Vec2, esp: number = 1e-3) {
+    const d = p2.sub(p1);
+    return new Vec2(Math.floor(p2.x + Math.sign(d.x) * esp), Math.floor(p2.y + Math.sign(d.y) * esp));
+}
+
 (() => {
     const game = document.getElementById("game") as (HTMLCanvasElement | null);
 
@@ -114,9 +119,14 @@ function rayCollisionWithGrid(begin: Vec2, end: Vec2): Vec2 {
         let point = new Vec2(0.5 * gridLayout.x, 0.5 * gridLayout.y);
         fillCircle(context, point, 0.1, "magenta");
 
-        for (let i = 0; i < 6; i++) {
+        for (; ;) {
             fillCircle(context, mousePosition, 0.1, "red");
             strokeLine(context, point, mousePosition, "red");
+
+            const c = hitCell(point, mousePosition);
+            if (c.x < 0 || c.x > gridLayout.x || c.y < 0 || c.y > gridLayout.y)
+                break;
+
             const p3 = rayCollisionWithGrid(point, mousePosition);
             point = mousePosition;
             mousePosition = p3;
